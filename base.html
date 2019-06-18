@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Expression</title>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <script type="text/javascript" src="expression.js"></script>
+    <!-- style defaults -->
+    <style>
+body { /* the background */
+  display: grid;
+  grid-template-columns: 1fr;
+  justify-items: center;
+  background: #ddd;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0pt;
+  padding: 10pt;
+}
+
+section { /* text documents */
+  margin: 10pt;
+  padding: 8pt;
+  width: auto;
+  box-sizing: border-box;
+  border-radius: 8pt;
+  background: white;
+  font-family: serif;
+  font-weight: normal;
+  text-decoration: none;
+  font-style: normal;
+  font-size: 16pt;
+}
+
+h1 { /* headings */
+  font-family: serif;
+  font-size: 24pt;
+}
+
+div.audio { /* audio controls */
+  margin: 10pt;
+  padding: 8pt;
+  border-radius: 8pt;
+  background-color: white;
+}
+
+div.audio .reset { /* reset button */
+  margin: 4pt;
+  font-size: larger;
+}
+
+div.audio .playpause { /* play/pause button */
+  margin: 4pt;
+  font-size: larger;
+}
+
+div.audio .vol-symbol { /* volume/mute symbol */
+  margin: 4pt;
+  font-size: larger;
+  text-decoration: none;
+  color: black;
+}
+
+div.audio .vol-symbol:visited { /* don't change color */
+  color: black;
+}
+
+svg { /* drawing canvases */
+  margin: 10pt;
+  padding: 8pt;
+  width: auto;
+  max-width: 50em;
+  box-sizing: border-box;
+  border-radius: 8pt;
+  background: white;
+}
+    </style>
+  </head>
+  <body id="body">
+  </body>
+</html>
