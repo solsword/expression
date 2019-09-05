@@ -1,7 +1,9 @@
 /*
- * expression.js
+ * # `expression.js`
+ *
  * Simple function-based Processing-like library for creating web pages that
- * include text, sound, and/or images. Each function is a command that creates * some text, part of a drawing, or a sound. Drawn elements, text, and sounds
+ * include text, sound, and/or images. Each function is a command that creates
+ * some text, part of a drawing, or a sound. Drawn elements, text, and sounds
  * are each added to the most recent drawing/text/audio context: a canvas,
  * document, or track. A set of commands for managing multiple
  * canvases/documents/tracks can be used to create more complicated pages.
@@ -12,28 +14,161 @@
 
 /********************************* Globals ************************************/
 
-// drawing
-var CURRENT_CANVAS = undefined; // Holds the current active canvas
-var DRAWING_STYLE = {}; // Current drawing style specifications
-var DEFAULT_DRAWING_STYLE = { // Default drawing style
-  "stroke-width": "1",
-  "stroke": "black",
-  "fill": "gray",
-};
 // Namespace URLs for SVG, XMLNS and XLINK namespaces
 var SVGNS = "http://www.w3.org/2000/svg";
 var XMLNS = "http://www.w3.org/2000/xmlns/";
 var XLINKNS = "http://www.w3.org/1999/xlink";
 
+// where to put stuff
+var CONTAINER = document.body;
+
+// drawing
+var CURRENT_CANVAS = undefined; // Holds the current active canvas
+var CURRENT_PATH = undefined; // The current drawing path
+var DRAWING_STYLE = {}; // Current drawing style specifications
+var DEFAULT_DRAWING_STYLE = { // Default drawing style
+  "stroke-width": "2",
+  "stroke": "black",
+  //"fill": "#ffc",
+  "fill": "#def",
+  //"fill": "#bef",
+};
+
 // text
 var CURRENT_DOCUMENT = undefined; // Holds the current active document
-var CURRENT_HEADING = undefined; // The current heading for `title`
+var CURRENT_HEADING = undefined; // The current heading for `write_title`
 var CURRENT_PARAGRAPH = undefined; // The current paragraph for `write`
 var TEXT_STYLE = {}; // The current text style
+var FONT_SPECS = { // font fallback orderings by serif/sans and language
+  "serif": {
+    "default": (
+      '"Noto Serif SC", ' // simplified Chinese as default for CJK
+    + '"Noto Serif", ' // fallback for Latin+ stuff not included in SC font
+    + '"Noto Serif TC", ' // fallback for extra traditional Chinese characters?
+    + '"Noto Serif KR", ' // fallback for Korean
+    + '"Noto Serif JP", ' // fallback for Japanese
+    + 'serif' // safe system default fallback
+    ),
+    "SC": ( // Simplified Chinese (TODO: Keys in native languages)
+      '"Noto Serif SC", '
+    + '"Noto Serif KR", '
+    + '"Noto Serif", '
+    + 'serif'
+    ),
+    "TC": ( // Traditional Chinese
+      '"Noto Serif TC", '
+    + '"Noto Serif KR", '
+    + '"Noto Serif", '
+    + 'serif'
+    ),
+    "KR": ( // Korean
+      '"Noto Serif KR", '
+    + '"Noto Serif TC", '
+    + '"Noto Serif", '
+    + 'serif'
+    ),
+    "JP": ( // Japanese
+      '"Noto Serif JP", '
+    + '"Noto Serif KR", '
+    + '"Noto Serif", '
+    + 'serif'
+    ),
+    "HK": ( // Cantonese (Hong Kong)
+      '"Noto Sans HK", ' // there's no serif HK T_T
+    + '"Noto Serif TC", '
+    + '"Noto Serif KR", '
+    + '"Noto Serif", '
+    + 'serif'
+    ),
+  },
+  "sans-serif": {
+    "default": (
+      '"Noto Sans SC", ' // simplified Chinese as default for CJK
+    + '"Noto Sans", ' // fallback for Latin+ stuff not included in SC font
+    + '"Noto Sans TC", ' // fallback for extra traditional Chinese characters?
+    + '"Noto Sans KR", ' // fallback for Korean
+    + '"Noto Sans JP", ' // fallback for Japanese
+    + 'sans-serif' // safe system default fallback
+    ),
+    "SC": ( // Simplified Chinese (TODO: Keys in native languages)
+      '"Noto Sans SC", '
+    + '"Noto Sans KR", '
+    + '"Noto Sans", '
+    + 'sans-serif'
+    ),
+    "TC": ( // Traditional Chinese
+      '"Noto Sans TC", '
+    + '"Noto Sans KR", '
+    + '"Noto Sans", '
+    + 'sans-serif'
+    ),
+    "KR": ( // Korean
+      '"Noto Sans KR", '
+    + '"Noto Sans TC", '
+    + '"Noto Sans", '
+    + 'sans-serif'
+    ),
+    "JP": ( // Japanese
+      '"Noto Sans JP", '
+    + '"Noto Sans KR", '
+    + '"Noto Sans", '
+    + 'sans-serif'
+    ),
+    "HK": ( // Cantonese (Hong Kong)
+      '"Noto Sans HK", '
+    + '"Noto Sans TC", '
+    + '"Noto Sans KR", '
+    + '"Noto Sans", '
+    + 'sans-serif'
+    ),
+  },
+  "monospace": {
+    "default": (
+      '"Noto Monospace SC", ' // simplified Chinese as default for CJK
+    + '"Noto Sans", ' // fallback for Latin+ stuff not included in SC font
+    + '"Noto Sans TC", ' // fallback for extra traditional Chinese characters?
+    + '"Noto Sans KR", ' // fallback for Korean
+    + '"Noto Sans JP", ' // fallback for Japanese
+    + 'sans-serif' // safe system default fallback
+    ),
+    "SC": ( // Simplified Chinese (TODO: Keys in native languages)
+      '"Noto Sans SC", '
+    + '"Noto Sans KR", '
+    + '"Noto Sans", '
+    + 'sans-serif'
+    ),
+    "TC": ( // Traditional Chinese
+      '"Noto Sans TC", '
+    + '"Noto Sans KR", '
+    + '"Noto Sans", '
+    + 'sans-serif'
+    ),
+    "KR": ( // Korean
+      '"Noto Sans KR", '
+    + '"Noto Sans TC", '
+    + '"Noto Sans", '
+    + 'sans-serif'
+    ),
+    "JP": ( // Japanese
+      '"Noto Sans JP", '
+    + '"Noto Sans KR", '
+    + '"Noto Sans", '
+    + 'sans-serif'
+    ),
+    "HK": ( // Cantonese (Hong Kong)
+      '"Noto Sans HK", '
+    + '"Noto Sans TC", '
+    + '"Noto Sans KR", '
+    + '"Noto Sans", '
+    + 'sans-serif'
+    ),
+  }
+}
+
 var DEFAULT_TEXT_STYLE = { // Default text style
   "font-weight": "normal",
   "text-decoration": "none",
-  "font-family": "serif",
+  "font-family": FONT_SPECS["serif"]["default"],
   "font-style": "normal",
   "font-size": "14pt",
 };
@@ -87,19 +222,59 @@ var FULL_NOTE_LENGTH = (1/(BPM / 60)) * 4; // length of a full note per BPM
 
 /********************** Context Management Functions **************************/
 
+function set_container(element) {
+  /*
+   * ## `set_container`
+   *
+   * - Categories: internal
+   * - Parameters:
+   *    * element: A DOM element.
+   * - Returns: nothing
+   * - Behavior: Sets the given DOM element as the destination for any new
+   *     contexts (audo, text, or drawing) created by other expression.js
+   *     functions.
+   * - See Also: new_canvas, new_document, new_audio
+   */
+  CONTAINER = element;
+}
+
+function reset() {
+  /*
+   * ## `reset`
+   *
+   * - Categories:
+   * - Parameters: None
+   * - Retursn: nothing
+   * - Behavior: deletes everything created by expression.js and removes all
+   *     created nodes from the page.
+   */
+  CONTAINER.innerHTML = "";
+
+  CURRENT_CANVAS = undefined; // Holds the current active canvas
+  CURRENT_PATH = undefined; // The current drawing path
+  DRAWING_STYLE = {}; // Current drawing style specifications
+
+  CURRENT_DOCUMENT = undefined; // Holds the current active document
+  CURRENT_HEADING = undefined; // The current heading for `write_title`
+  CURRENT_PARAGRAPH = undefined; // The current paragraph for `write`
+  TEXT_STYLE = {}; // The current text style
+
+  CURRENT_AUDIO = undefined; // The current audio element
+  CURRENT_TRACK = undefined; // The current audio track
+}
+
 function get_canvas() {
   /*
-   * get_canvas
+   * ## `get_canvas`
    *
-   * Parameters: None
-   *
-   * Returns: A drawing canvas
-   *
-   * Behavior: Returns the current canvas to draw on. Not normally required, as
-   *   functions that need a canvas will call this automatically. If there is
-   *   no current canvas, a new canvas will be created and added to the page.
-   *
-   * See Also: new_canvas
+   * - Categories: internal images
+   * - Parameters: None
+   * - Returns: A drawing canvas
+   * - Behavior: Returns the current canvas to draw on. Not normally required,
+   *     as functions that need a canvas will call this automatically. If there
+   *     is no current canvas, a new canvas will be created and added to the
+   *     page.
+   * - See Also: new_canvas
    */
   if (CURRENT_CANVAS == undefined) {
     return new_canvas();
@@ -110,20 +285,21 @@ function get_canvas() {
 
 function new_canvas() {
   /*
-   * new_canvas
-   *
-   * Parameters: None
-   *
-   * Returns: A drawing canvas
-   *
-   * Behavior: Creates a new fresh drawing canvas and adds it to the page. Any
-   *   drawing commands that follow this command will affect the new canvas
-   *   instead of any previous canvases that might have been created before.
-   *
-   * See Also: get_canvas, current_drawing_style, the draw_... functions
-   *
+   * ## `new_canvas`
+   * - Categories: context_control images
+   * - Parameters: None
+   * - Returns: A drawing canvas
+   * - Behavior: Creates a new fresh drawing canvas and adds it to the page.
+   *     Any drawing commands that follow this command will affect the new
+   *     canvas instead of any previous canvases that might have been created
+   *     before.
+   * - See Also: get_canvas, current_drawing_style, the draw_... functions
    */
+  let div = document.createElement("div");
+  div.classList.add("canvas_container");
+
   let svg = document.createElementNS(SVGNS, 'svg');
+  svg.classList.add("canvas");
   svg.setAttributeNS(XMLNS, "xmlns", SVGNS);
   svg.setAttributeNS(XMLNS, "xmlns:xlink", XLINKNS);
   svg.setAttributeNS(null, "viewBox", "-320 -240 640 480");
@@ -133,26 +309,103 @@ function new_canvas() {
   CURRENT_CANVAS = document.createElementNS(SVGNS, 'g');
   CURRENT_CANVAS.setAttributeNS(null, "transform", "scale(1, -1)");
   svg.appendChild(CURRENT_CANVAS);
+
+  // We add a download button to save the SVG canvas to disk.
+  dl_button = document.createElement("button");
+  dl_button.classList.add("dl_button")
+  //dl_button.innerText = "💾";
+  dl_button.innerText = "⬇";
+  dl_button.addEventListener("click", function () {
+    save_canvas(svg);
+  });
+
+  div.appendChild(dl_button);
   
-  // TODO: Add transform to match HS math coordinates!
-  document.body.appendChild(svg);
+  div.appendChild(svg);
+  CONTAINER.append(div);
   return CURRENT_CANVAS;
+}
+
+function save_canvas(svg, filename) {
+  /*
+   * ## `save_canvas`
+   *
+   * - Categories: internal images
+   * - Parameters:
+   *     * svg: The DOM SVG element to save.
+   * - Returns: nothing
+   * - Behavior: Bundles up the given SVG element into a file and offers it to
+   *     the user as a download.
+   * - See Also: new_canvas
+   */
+  if (filename == undefined) {
+    filename = "expression_canvas.svg";
+  }
+
+  var a = document.createElement('a');
+  a.setAttribute(
+    "href",
+    "data:image/svg;charset=utf-8," + encodeURIComponent(svg.outerHTML)
+  );
+  a.setAttribute("download", filename);
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function get_path() {
+  /*
+   * ## `get_path`
+   * - Categories: internal images
+   * - Parameters: None
+   * - Returns: A drawing path
+   * - Behavior: Returns the current drawing path, or creates and returns a new
+   *     path within the current canvas if there isn't already a path. Not
+   *     normally required, as functions that need an audio track will call
+   *     this automatically.
+   * - See Also: new_path
+   */
+  if (CURRENT_PATH == undefined) {
+    return new_path();
+  } else {
+    return CURRENT_PATH;
+  }
+}
+
+function new_path() {
+  /*
+   * ## `new_path`
+   * - Categories: context_control images
+   * - Parameters: None
+   * - Returns: A new drawing path
+   * - Behavior: Creates a new drawing path within the current canvas, and sets
+   *     it as the current path. `draw_to` and similar calls that come after
+   *     this will affect the new path instead of any previous paths. The pen
+   *     position for the new path is [0, 0].
+   * - See Also: get_path, move_pen_to, draw_line_to, draw_curve_to
+   */
+  CURRENT_PATH = document.createElementNS(SVGNS, 'path');
+  CURRENT_PATH.setAttributeNS(null, "d", "M 0 0");
+  CURRENT_PATH.setAttributeNS(null, "data-heading", "0");
+  CURRENT_PATH.setAttributeNS(null, "data-position", "0,0");
+  apply_drawing_style(CURRENT_PATH);
+  let cv = get_canvas();
+  cv.appendChild(CURRENT_PATH);
+  return CURRENT_PATH;
 }
 
 function get_document() {
   /*
-   * get_document
-   *
-   * Parameters: None
-   *
-   * Returns: A text document
-   *
-   * Behavior: Returns the current document, or creates and returns a new
-   *   document if there isn't already a document on the page. Not normally
-   *   required, as functions that need a document will call this
-   *   automatically.
-   *
-   * See Also: new_document
+   * ## `get_document`
+   * - Categories: internal text
+   * - Parameters: None
+   * - Returns: A text document
+   * - Behavior: Returns the current document, or creates and returns a new
+   *     document if there isn't already a document on the page. Not normally
+   *     required, as functions that need a document will call this
+   *     automatically.
+   * - See Also: new_document
    */
   if (CURRENT_DOCUMENT == undefined) {
     return new_document();
@@ -163,22 +416,19 @@ function get_document() {
 
 function new_document() {
   /*
-   * new_document
-   *
-   * Parameters: None
-   *
-   * Returns: A text document
-   *
-   * Behavior: Creates a new fresh text document and adds it to the page. Any
-   *   text commands that follow this command will affect the new document
-   *   instead of any previous documents that might have been created before.
-   *
-   * See Also: get_document, new_heading, new_paragraph, title, write,
-   *   current_text_style
-   *
+   * ## `new_document`
+   * - Categories: context_control text
+   * - Parameters: None
+   * - Returns: A text document
+   * - Behavior: Creates a new fresh text document and adds it to the page. Any
+   *     text commands that follow this command will affect the new document
+   *     instead of any previous documents that might have been created before.
+   * - See Also: get_document, new_heading, new_paragraph, write_title, write,
+   *     current_text_style
    */
   CURRENT_DOCUMENT = document.createElement('section');
-  document.body.appendChild(CURRENT_DOCUMENT);
+  CURRENT_DOCUMENT.classList.add("document");
+  CONTAINER.appendChild(CURRENT_DOCUMENT);
   CURRENT_PARAGRAPH = undefined;
   CURRENT_HEADING = undefined;
   return CURRENT_DOCUMENT;
@@ -186,17 +436,13 @@ function new_document() {
 
 function get_paragraph() {
   /*
-   * get_paragraph
-   *
-   * Parameters: None
-   *
-   * Returns: The current paragraph
-   *
-   * Behavior: Returns the current paragraph of text, or creates and returns a
-   *   new paragraph if there isn't a current paragraph.
-   *
-   * See Also: new_paragraph
-   *
+   * ## `get_paragraph`
+   * - Categories: internal text
+   * - Parameters: None
+   * - Returns: The current paragraph
+   * - Behavior: Returns the current paragraph of text, or creates and returns
+   *     a new paragraph if there isn't a current paragraph.
+   * - See Also: new_paragraph
    */
   if (CURRENT_PARAGRAPH == undefined) {
     return new_paragraph()
@@ -207,18 +453,14 @@ function get_paragraph() {
 
 function new_paragraph() {
   /*
-   * new_paragraph
-   *
-   * Parameters: None
-   *
-   * Returns: A new text paragraph
-   *
-   * Behavior: Creates a new text paragraph, which becomes the current
-   *   paragraph. Text produced by the `write` command will be added to this new
-   *   paragraph by default.
-   *
-   * See Also: get_paragraph, write
-   *
+   * ## `new_paragraph`
+   * - Categories: context_control text
+   * - Parameters: None
+   * - Returns: A new text paragraph
+   * - Behavior: Creates a new text paragraph, which becomes the current
+   *     paragraph. Text produced by the `write` command will be added to this
+   *     new paragraph by default.
+   * - See Also: get_paragraph, write
    */
   let cd = get_document();
   CURRENT_PARAGRAPH = document.createElement('p');
@@ -229,17 +471,13 @@ function new_paragraph() {
 
 function get_heading() {
   /*
-   * get_heading
-   *
-   * Parameters: None
-   *
-   * Returns: The current heading
-   *
-   * Behavior: Returns the current text heading, or creates and returns a new
-   * heading if there isn't a current heading.
-   *
-   * See Also: new_heading
-   *
+   * ## `get_heading`
+   * - Categories: internal text
+   * - Parameters: None
+   * - Returns: The current heading
+   * - Behavior: Returns the current text heading, or creates and returns a new
+   *     heading if there isn't a current heading.
+   * - See Also: new_heading
    */
   if (CURRENT_HEADING == undefined) {
     return new_heading();
@@ -250,18 +488,14 @@ function get_heading() {
 
 function new_heading() {
   /*
-   * new_heading
-   *
-   * Parameters: None
-   *
-   * Returns: A new text heading
-   *
-   * Behavior: Creates a new text heading, which becomes the current
-   *   heading. Text produced by the `title` command will be added to this new
-   *   heading by default.
-   *
-   * See Also: get_heading, title
-   *
+   * ## `new_heading`
+   * - Categories: context_control text
+   * - Parameters: None
+   * - Returns: A new text heading
+   * - Behavior: Creates a new text heading, which becomes the current heading.
+   *     Text produced by the `write_title` command will be added to this new
+   *     heading by default.
+   * - See Also: get_heading, write_title
    */
   let cd = get_document(); 
   CURRENT_HEADING = document.createElement('h1');
@@ -272,18 +506,15 @@ function new_heading() {
 
 function get_audio() {
   /*
-   * get_audio
-   *
-   * Parameters: None
-   *
-   * Returns: An audio player
-   *
-   * Behavior: Returns the current audio player, or creates and returns a new
-   *   audio player if there isn't already one on the page. Not normally
-   *   required, as functions that need an audio player will call this
-   *   automatically.
-   *
-   * See Also: new_audio
+   * ## `get_audio`
+   * - Categories: internal audio
+   * - Parameters: None
+   * - Returns: An audio player
+   * - Behavior: Returns the current audio player, or creates and returns a new
+   *     audio player if there isn't already one on the page. Not normally
+   *     required, as functions that need an audio player will call this
+   *     automatically.
+   * - See Also: new_audio
    */
   if (CURRENT_AUDIO == undefined) {
     return new_audio();
@@ -294,18 +525,14 @@ function get_audio() {
 
 function new_audio() {
   /*
-   * new_audio
-   *
-   * Parameters: None
-   *
-   * Returns: A new audio player
-   *
-   * Behavior: Creates a new fresh audio player and adds it to the page. Any
-   *   audio commands that follow this command will affect the new player
-   *   instead of any previous players that might have been created before.
-   *
-   * See Also: get_audio, new_track, add_note
-   *
+   * ## `new_audio`
+   * - Categories: context_control audio
+   * - Parameters: None
+   * - Returns: A new audio player
+   * - Behavior: Creates a new fresh audio player and adds it to the page. Any
+   *     audio commands that follow this command will affect the new player
+   *     instead of any previous players that might have been created before.
+   * - See Also: get_audio, new_track, add_note
    */
   let ctx = new AudioContext();
 
@@ -385,25 +612,22 @@ function new_audio() {
   CURRENT_AUDIO.appendChild(vol);
 
   // Wrap things up
-  document.body.appendChild(CURRENT_AUDIO);
+  CONTAINER.appendChild(CURRENT_AUDIO);
   CURRENT_TRACK = undefined;
   return CURRENT_AUDIO;
 }
 
 function get_track() {
   /*
-   * get_track
-   *
-   * Parameters: None
-   *
-   * Returns: An audio track
-   *
-   * Behavior: Returns the current audio track, or creates and returns a new
-   *   track within the current audio player if there isn't already a track.
-   *   Not normally required, as functions that need an audio track will call
-   *   this automatically.
-   *
-   * See Also: new_track
+   * ## `get_track`
+   * - Categories: internal audio
+   * - Parameters: None
+   * - Returns: An audio track
+   * - Behavior: Returns the current audio track, or creates and returns a new
+   *     track within the current audio player if there isn't already a track.
+   *     Not normally required, as functions that need an audio track will call
+   *     this automatically.
+   * - See Also: new_track
    */
   if (CURRENT_TRACK == undefined) {
     return new_track();
@@ -414,17 +638,14 @@ function get_track() {
 
 function new_track() {
   /*
-   * new_track
-   *
-   * Parameters: None
-   *
-   * Returns: A new audio track
-   *
-   * Behavior: Creates a new audio track within the current audio player, and
-   *   sets it as the current track. `add_note` calls that come after this
-   *   will affect the new track instead of any previous tracks.
-   *
-   * See Also: get_track, add_note
+   * ## `new_track`
+   * - Categories: context_control audio
+   * - Parameters: None
+   * - Returns: A new audio track
+   * - Behavior: Creates a new audio track within the current audio player, and
+   *     sets it as the current track. `add_note` calls that come after this
+   *     will affect the new track instead of any previous tracks.
+   * - See Also: get_track, add_note
    */
   let ca = get_audio();
   CURRENT_TRACK = {
@@ -441,16 +662,13 @@ function new_track() {
 
 function current_text_style() {
   /*
-   * current_text_style
-   *
-   * Parameters: None
-   *
-   * Returns: An object describing the style used for writing text.
-   *
-   * Behavior: Returns the current style settings for text, like the
-   *   font, font weight, and text decoration.
-   *
-   * See Also: get_document, set_text_style
+   * ## `current_text_style`
+   * - Categories: internal text
+   * - Parameters: None
+   * - Returns: A string describing the style used for writing text.
+   * - Behavior: Returns the current style settings for text, like the font,
+   *     font weight, and text decoration.
+   * - See Also: get_document, set_text_style
    */
   let cs = TEXT_STYLE;
   let style = "";
@@ -464,30 +682,154 @@ function current_text_style() {
 
 function set_text_style(property, value) {
   /*
-   * set_text_style
-   *
-   * Parameters:
-   *   property - The style property to set.
-   *   value - The new value for that property.
-   *
-   * Returns: None
-   *
-   * Behavior: Changes one property of the current text style. There are more
-   *   specific functions for key style properties, but this can be used to
-   *   alter any valid CSS style property.
-   *
-   * See Also: current_text_style, set_font, set_bold, set_underline,
-   *  set_italic
+   * ## `set_text_style`
+   * - Categories: internal text
+   * - Parameters:
+   *    * property: The style property to set.
+   *    * value: The new value for that property.
+   * - Returns: None
+   * - Behavior: Changes one property of the current text style. There are more
+   *     specific functions for key style properties, but this can be used to
+   *     alter any valid CSS style property.
+   * - See Also: current_text_style, set_font, set_bold, set_underline,
+   *    set_italic, set_text_color
    */
   TEXT_STYLE[property] = value;
 }
 
-function set_font(font_name) {
+function clear_text_style() {
+  /*
+   * ## `check_text_style`
+   * - Categories: style_control text
+   * - Parameters: None
+   * - Returns: Nothing
+   * - Behavior: Resets all text styles back to the default (14pt non-bold
+   *     non-underlined non-italic black serif). // TODO: Built-in fonts
+   * - See Also: set_text_style, clear_text_style
+   */
+  TEXT_STYLE = {};
+}
+
+function check_text_style() {
+  /*
+   * ## `check_text_style`
+   * - Categories: style_control text
+   * - Parameters: None
+   * - Returns: A string describing the current text style.
+   * - Behavior: Checks the current text style settings and builds a string to
+   *     describe the most important style settings, which are the following:
+   *
+   *     - size
+   *     - bold
+   *     - underline
+   *     - italic
+   *     - color
+   *     - font
+   *
+   *     Size and font are always included, and the rest of the properties are
+   *     only included if they're different from the default (non-bold,
+   *     non-underlined, non-italic black). So for example this function might
+   *     return a string like:
+   *
+   *       "14pt underlined red TeX Gyre Pagella"
+   * - See Also: set_text_style, clear_text_style
+   */
+  let result = "";
+  if (TEXT_STYLE.hasOwnProperty("font-size")) {
+    result += TEXT_STYLE["font-size"];
+  } else {
+    result += DEFAULT_TEXT_STYLE["font-size"];
+  }
+  if (
+    TEXT_STYLE.hasOwnProperty("font-weight")
+ && TEXT_STYLE["font-weight"] == "bold"
+  ) {
+    result += " bold";
+  }
+  if (
+    TEXT_STYLE.hasOwnProperty("text-decoration")
+ && TEXT_STYLE["text-decoration"] == "underline"
+  ) {
+    result += " underlined";
+  }
+  if (
+    TEXT_STYLE.hasOwnProperty("font-style")
+ && TEXT_STYLE["font-style"] == "italic"
+  ) {
+    result += " italic";
+  }
+  // TODO: better color translation
+  if (
+    TEXT_STYLE.hasOwnProperty("color")
+ && TEXT_STYLE["color"] != "black"
+  ) {
+    result += " " + TEXT_STYLE["color"];
+  }
+  if (TEXT_STYLE.hasOwnProperty("font-family")) {
+    let ff = TEXT_STYLE["font-family"];
+  } else {
+    let ff = DEFAULT_TEXT_STYLE["font-family"];
+  }
+  if (ff.indexOf(' ') >= 0) {
+    ff = ff.slice(0, ff.indexOf(' '));
+  }
+  result += ff;
+  return result;
+}
+
+function load_font(script, style) {
+  /*
+   * ## `load_font`
+   * - Categories: internal text fonts
+   * - Parameters:
+   *    * script: A string identifying a script/language
+   *    * style (optional): A string specifying a letter style
+   * - Returns: None
+   * - Behavior: Adds a link to the page that loads a font appropriate for the
+   *     given style and language. Available languages and styles are based on
+   *     the Google Noto project fonts. If the style is unspecified, the first
+   *     available style for the given script will be used, with serif or
+   *     otherwise unsimplified forms being preferred. See [available
+   *     scripts](#available_scripts) and [script styles](#script_styles) for
+   *     more information about what is available.
+   * - See Also: current_text_style, set_bold, set_underline, set_italic,
+   *     available_scripts, script_styles
+   */
+}
+
+function set_font(script, style) {
+  /*
+   * ## `set_font`
+   * - Categories: style_control text fonts
+   * - Parameters:
+   *    * script: A string identifying a script/language
+   *    * style (optional): A string specifying a letter style
+   * - Returns: None
+   * - Behavior: Changes the current font. New text created after this point
+   *     will use the new font, but already-created text will not be affected.
+   *     An attempt will be made to load the selected font from the internet,
+   *     but if this doesn't work, local installed fonts will be used which
+   *     might not exactly match the requested script and style. See
+   *     [available scripts](#available_scripts) for a list of scripts and
+   *     styles.
+   * - See Also: current_text_style, set_bold, set_underline, set_italic
+   */
   // TODO: Font library!
   set_text_style("font-family", font_name + ", serif;");
 }
 
 function set_bold(on) {
+  /*
+   * ## `set_bold`
+   * - Categories: style_control text
+   * - Parameters:
+   *    * on: Either true or false
+   * - Returns: None
+   * - Behavior: Sets the current font style to be either bold or
+   *     normal-weight, depending on whether the `on` parameter is true (bold
+   *     font) or false (normal weight). Only affects text created afterwards.
+   * - See Also: current_text_style, set_font, set_underline, set_italic
+   */
   if (on) {
     set_text_style("font-weight", "bold");
   } else {
@@ -496,6 +838,17 @@ function set_bold(on) {
 }
 
 function set_underline(on) {
+  /*
+   * ## `set_underline`
+   * - Categories: style_control text
+   * - Parameters:
+   *    * on: Either true or false
+   * - Returns: None
+   * - Behavior: Sets the current font style to be either underlined or not,
+   *     depending on whether the `on` parameter is true (underline) or false
+   *     (no underline). Only affects text created afterwards.
+   * - See Also: current_text_style, set_font, set_bold, set_italic
+   */
   if (on) {
     set_text_style("text-decoration", "underline");
   } else {
@@ -504,6 +857,17 @@ function set_underline(on) {
 }
 
 function set_italic(on) {
+  /*
+   * ## `set_italic`
+   * - Categories: style_control text
+   * - Parameters:
+   *    * on: Either true or false
+   * - Returns: None
+   * - Behavior: Sets the current font style to be either italic or not,
+   *     depending on whether the `on` parameter is true (italic) or false
+   *     (normal shape). Only affects text created afterwards.
+   * - See Also: current_text_style, set_font, set_bold, set_underline
+   */
   if (on) {
     set_text_style("font-style", "italic");
   } else {
@@ -511,9 +875,50 @@ function set_italic(on) {
   }
 }
 
+function set_text_color(color) {
+  /*
+   * ## `set_text_color`
+   * - Categories: style_control text
+   * - Parameters:
+   *    * color: The name of a color, like 'red' or 'blue'.
+   * - Returns: None
+   * - Behavior: Sets the color for text. The color parameter must be specified
+   *     as a 6-digit hexadecimal color value (see `pick_color`);
+   * - See Also: current_text_style, set_font, set_bold, set_underline
+   */
+  if (on) {
+    set_text_style("font-style", "italic");
+  } else {
+    set_text_style("font-style", "normal");
+  }
+}
+
+// TODO
+//function pick_color(
+
+
 /********************** Text Creation Functions *******************************/
 
-function write(words) {
+function write(words, spacing) {
+  /*
+   * ## `write`
+   * - Categories: create text
+   * - Parameters:
+   *    * words: The text to add
+   *    * spacing (optional): Whether to automatically add spacing next to the
+   *        text; defaults to true.
+   * - Returns: None
+   * - Behavior: Adds new text to the current paragraph, or starts a new
+   *     paragraph (and possibly a new document) if there isn't a current
+   *     paragraph. Normally, it just needs one argument, but a second argument
+   *     of `false` can be supplied to prevent extra spaces from appearing at
+   *     the edges of the text added, if you want two different `write` calls
+   *     to produce text that doesn't have a space in between.
+   * - See Also: new_document, new_paragraph, write_title, write_link, set_font,
+   *     current_text_style
+   */
+  if (spacing == undefined) { spacing = true; }
+  if (spacing) { words = ' ' + words + ' '; }
   let cp = get_paragraph()
   let sp = document.createElement("span");
   sp.innerText = words;
@@ -521,7 +926,45 @@ function write(words) {
   cp.appendChild(sp)
 }
 
-function title(words) {
+function write_exact(words) {
+  /*
+   * ## `write_exact`
+   * - Categories: create text alias
+   * - Parameters:
+   *   words - The text to add
+   * - Returns: None
+   * - Behavior: Just an alias for `write` with a second argument of `false`,
+   *     meaning that no extra spaces will be added automatically.
+   * - See Also: write
+   */
+  write(words, false);
+}
+
+function write_link(words, url) {
+  /*
+   * ## `write_link`
+   * - Categories: create text
+   * - Parameters:
+   *    * words: The text to add
+   *    * url: the URL to link to
+   * - Returns: None
+   * - Behavior: Adds a hyperlink to the current paragraph. The URL should
+   *     start with `https://` unless you want the link to go to another
+   *     document that's on the same server as the current project. The link
+   *     will use any currently active text styles, like bold or underline, but
+   *     regardless of those styles it will always be underlined, and unless
+   *     another color is specified, it will be gray instead of black.
+   * - See Also: write_title, write, set_text_color
+   */
+  let cp = get_paragraph()
+  let a = document.createElement("a");
+  a.href = url;
+  a.innerText = words;
+  a.style = current_text_style();
+  cp.appendChild(a);
+}
+
+function write_title(words) {
   let ch = get_heading()
   let sp = document.createElement("span");
   sp.innerText = words;
@@ -849,6 +1292,7 @@ function toggle_mute(audio, mute) {
 
 function set_volume(audio, value, update_slider) {
   /*
+   * TODO: HERE
    * set_volume
    *
    * Parameters:
@@ -881,44 +1325,39 @@ function set_volume(audio, value, update_slider) {
 
 function add_note(tone, duration) {
   /*
-   * add_note
+   * ## `add_note`
+   * - Parameters:
+   *    * tone: a tone letter or number, like 'A', 'C#', or 'Eb'.
+   *    * duration: a duration in seconds, or a letter like 'e' or 'h'.
+   * - Returns: Nothing
+   * - Behavior: Adds a note to the current track, using the given tone, which
+   *     should be specified using either a number for pentatonic scale or a
+   *     letter (plus accident and/or octave modifiers) for classical scale.
+   *     For example, "A", "C#", "Eb", "B--", "-5", and "3" are all valid tone
+   *     specifications. When using a letter, add '--', '-', '+', or '++' to
+   *     the end to shift the tone up or down by up to two octaves. '#' and 'b'
+   *     are used for sharp and flat modifiers. Using numbers for a pentatonic
+   *     scale, 0 corresponds to A, 1 to C, 2 to D, 3 to E, and 4 to G.
+   *     Negative numbers or higher positive numbers are tones in higher or
+   *     lower octaves, so -5 is one octave below 0 (equivalent to "A-"), and
+   *     the full range allowed is between -10 and 14 (inclusive). Pentatonic
+   *     tones may not have sharp/flat modifiers.
    *
-   * Parameters:
-   *   tone - a tone letter or number, like 'A', 'C#', or 'Eb'.
-   *   duration - a duration in seconds, or a letter like 'e' or 'h'.
-   *
-   * Returns: Nothing
-   *
-   * Behavior: Adds a note to the current track, using the given tone, which
-   *   should be specified using either a number for pentatonic scale or a
-   *   letter (plus accident and/or octave modifiers) for classical scale. For
-   *   example, "A", "C#", "Eb", "B--", "-5", and "3" are all valid tone
-   *   specifications. When using a letter, add '--', '-', '+', or '++' to the
-   *   end to shift the tone up or down by up to two octaves. '#' and 'b' are
-   *   used for sharp and flat modifiers. Using numbers for a pentatonic scale,
-   *   0 corresponds to A, 1 to C, 2 to D, 3 to E, and 4 to G. Negative numbers
-   *   or higher positive numbers are tones in higher or lower octaves, so -5
-   *   is one octave below 0 (equivalent to "A-"), and the full range allowed
-   *   is between -10 and 14 (inclusive). Pentatonic tones may not have
-   *   sharp/flat modifiers.
-   *
-   *   For the duration, a numerical value in seconds may be given, or a letter
-   *   to indicate the fraction of a measure:
-   *
-   *     't' - thirty-second note
-   *     's' - sixteenth note
-   *     'e' - eighth note
-   *     'q' - quarter note
-   *     'h' - half note
-   *     'f' - full note
-   *
-   *   When a letter is given, 108 BPM in 4:4 time is used to compute the note
-   *   duration. A letter may also be followed by a period (e.g., 'q.' or 'h.')
-   *   to indicate a dotted note, which is 1.5 times as long as it would be
-   *   otherwise.
-   *
-   * See Also:
-   *   get_track, add_rest, queue_notes
+   *     For the duration, a numerical value in seconds may be given, or a
+   *     letter to indicate the fraction of a measure:
+   *    
+   *       't' - thirty-second note
+   *       's' - sixteenth note
+   *       'e' - eighth note
+   *       'q' - quarter note
+   *       'h' - half note
+   *       'f' - full note
+   *    
+   *     When a letter is given, 108 BPM in 4:4 time is used to compute the
+   *     note duration. A letter may also be followed by a period (e.g., 'q.'
+   *     or 'h.') to indicate a dotted note, which is 1.5 times as long as it
+   *     would be otherwise.
+   * - See Also: get_track, add_rest, queue_notes
    */
   let dur = duration;
   if (typeof(duration) === 'string' || duration instanceof String) {
@@ -980,18 +1419,14 @@ function add_note(tone, duration) {
 
 function add_rest(duration) {
   /*
-   * add_rest
-   *
-   * Parameters:
-   *   duration - A duration number in seconds or a letter (see `add_note`)
-   *
-   * Returns: Nothing
-   *
-   * Behavior: Works just like add_note, but adds a length of silence to the
-   *   current track instead of a note. The duration is specified using the
-   *   same rules for the `add_note` function.
-   *
-   * See Also: add_note
+   * ## add_rest
+   * - Parameters:
+   *    * duration: A duration number in seconds or a letter (see `add_note`)
+   * - Returns: Nothing
+   * - Behavior: Works just like add_note, but adds a length of silence to the
+   *     current track instead of a note. The duration is specified using the
+   *     same rules for the `add_note` function.
+   * - See Also: add_note
    */
   add_note('-', duration);
 }
@@ -1000,56 +1435,45 @@ function add_rest(duration) {
 
 function v_length(v) {
   /*
-   * v_length
+   * ## `v_length`
+   * - Parameters:
+   *    * v: a vector
+   * - Returns: A number.
+   * - Behavior: The result is the length of the given vector. It is computed
+   *     as:
    *
-   * Parameters:
-   *   v - a vector
-   *
-   * Returns: A number.
-   *
-   * Behavior: The result is the length of the given vector. It is computed as:
-   *
-   *   √(v[0]² + v[1]²)
-   *
-   * See Also: v_scale
+   *     √(v[0]² + v[1]²)
+   * - See Also: v_scale
    */
   return Math.sqrt(v[0]*v[0] + v[1]*v[1]);
 }
 
 function v_scale(v, s) {
   /*
-   * v_scale
-   *
-   * Parameters:
-   *   v - the vector
-   *   s - the scale factor
-   *
-   * Returns: A new vector (does not modify the given vector).
-   *
-   * Behavior: The result is a new vector that is a scaled-up or scaled-down
-   *   version of the original vector. Each component of the given vector is
-   *   multiplied by the scaling factor.
-   *
-   * See Also: v_add, v_dot
+   * ## `v_scale`
+   * - Parameters:
+   *    * v: the vector
+   *    * s: the scale factor
+   * - Returns: A new vector (does not modify the given vector).
+   * - Behavior: The result is a new vector that is a scaled-up or scaled-down
+   *     version of the original vector. Each component of the given vector is
+   *     multiplied by the scaling factor.
+   * - See Also: v_add, v_dot
    */
   return [v[0] * s, v[1] * s];
 }
 
 function v_norm(v) {
   /*
-   * v_norm
-   *
-   * Parameters:
-   *   v - a vector
-   *
-   * Returns: A new vector (does not modify the given vector).
-   *
-   * Behavior: The result is a new vector that points in the same direction as
-   *   the original but which is exactly 1 unit long. This is the same as
-   *   applying v_scale(v, 1/v_length(v)). If the original vector is 0-length,
-   *   this function will generate an error.
-   *
-   * See Also: v_length, v_scale
+   * ## `v_norm`
+   * - Parameters:
+   *    * v: a vector
+   * - Returns: A new vector (does not modify the given vector).
+   * - Behavior: The result is a new vector that points in the same direction
+   *     as the original but which is exactly 1 unit long. This is the same as
+   *     applying v_scale(v, 1/v_length(v)). If the original vector is
+   *     0-length, this function will generate an error.
+   * - See Also: v_length, v_scale
    */
   return v_scale(v, 1/v_length(v));
 }
@@ -1057,68 +1481,58 @@ function v_norm(v) {
 
 function v_add(v1, v2) {
   /*
-   * v_add
-   *
-   * Parameters:
-   *   v1 - the first vector
-   *   v2 - the second vector
-   *
-   * Returns: A new vector.
-   *
-   * Behavior: The result is the vector sum of the two vectors given, which is
-   *   computed as:
+   * ## `v_add`
+   * - Parameters:
+   *    * v1: the first vector
+   *    * v2: the second vector
+   * - Returns: A new vector.
+   * - Behavior: The result is the vector sum of the two vectors given, which
+   *     is computed as:
    *
    *     [
    *       v1[0] + v2[0],
    *       v1[1] + v2[1]
    *     ]
-   *
-   * See Also: v_scale, v_sub
+   * - See Also: v_scale, v_sub
    */
   return [v1[0] + v2[0], v1[1] + v2[1]];
 }
 
 function v_sub(v1, v2) {
   /*
-   * v_sub
+   * ## `v_sub`
+   * - Parameters:
+   *   * v1: the first vector
+   *   * v2: the second vector
+   * - Returns: A new vector.
+   * - Behavior: The result is the first vector minus the second, which is:
    *
-   * Parameters:
-   *   v1 - the first vector
-   *   v2 - the second vector
+   *     [
+   *       v1[0] - v2[0],
+   *       v1[1] - v2[1]
+   *     ]
    *
-   * Returns: A new vector.
-   *
-   * Behavior: The result is the first vector minus the second, which is:
-   *
-   *   [
-   *     v1[0] - v2[0],
-   *     v1[1] - v2[1]
-   *   ]
-   *
-   * See Also: v_add
+   * - See Also: v_add
    */
   return [v1[0] - v2[0], v1[1] - v2[1]];
 }
 
 function v_dot(v1, v2) {
   /*
-   * v_dot
+   * ## v_dot
+   * - Parameters:
+   *     * v1: the first vector
+   *     * v2: the second vector
+   * - Returns: A number.
+   * - Behavior: The result is the dot product of the two vectors, which is:
    *
-   * Parameters:
-   *   v1 - the first vector
-   *   v2 - the second vector
+   *     v1[0] * v2[0] + v1[1] * v2[1]
    *
-   * Returns: A number.
+   *     Note that the dot product of two vectors v1 and v2 is equal to the
+   *     product of the lengths of each vector and the cosine of the angle
+   *     between them:
    *
-   * Behavior: The result is the dot product of the two vectors, which is:
-   *
-   *   v1[0] * v2[0] + v1[1] * v2[1]
-   *
-   *   Note that the dot product of two vectors v1 and v2 is equal to the
-   *   product of the lengths of each vector and the cosine of the angle
-   *   between them:
-   *
-   *   v_dot(v1, v2) == v_length(v1) * v_length(v2) * Math.cos(v_angle(v1, v2))
+   *     v_dot(v1, v2) == v_length(v1)*v_length(v2) * Math.cos(v_angle(v1, v2))
    *
    * See Also: v_length, v_scale, v_angle, v_add
    */
@@ -1127,20 +1541,17 @@ function v_dot(v1, v2) {
 
 function v_angle(v1, v2) {
   /*
-   * v_angle
-   *
-   * Parameters:
-   *   v1 - the first vector
-   *   v2 - the second vector
-   *
-   * Returns: A number in degrees (not radians).
-   *
-   * Behavior: The result is the angle (in degrees, not radians) between the
-   *   two vectors. If either vector has length 0 this will result in an error.
-   *   The value returned will be the smaller of the two ways to measure the
-   *   angle between the vectors.
-   *
-   * See Also: v_length, v_dot
+   * ## `v_angle`
+   * - Parameters:
+   *    * v1: the first vector
+   *    * v2: the second vector
+   * - Returns: A number in degrees (not radians).
+   * - Behavior: The result is the angle (in degrees, not radians) between the
+   *     two vectors. If either vector has length 0 this will result in an
+   *     error. The value returned will be the smaller of the two ways to
+   *     measure the angle between the vectors, and will always be positive,
+   *     regardless of direction between the vectors.
+   * - See Also: v_length, v_dot, v_rotation
    */
   let cos = v_dot(v1, v2);
   cos /= v_length(v1);
@@ -1148,21 +1559,62 @@ function v_angle(v1, v2) {
   return Math.acos(cos) * 180 / Math.PI;
 }
 
+function v_rotation(v1, v2) {
+  /*
+   * ## `v_rotation`
+   * - Parameters:
+   *    * v1: the first vector
+   *    * v2: the second vector
+   * - Returns: A number in degrees (not radians).
+   * - Behavior: The same result as v_angle, except that it will be positive
+   *     for counter-clockwise rotations and negative for clockwise rotations.
+   * - See Also: v_rotation
+   */
+  let a1 = v_angle([1, 0], v1);
+  let a2 = v_angle([1, 0], v2);
+  if (v1[1] < 0) { a1 = -a1; }
+  if (v2[1] < 0) { a2 = -a2; }
+  let result = a2 - a1;
+  if (result > 180) {
+    return result - 360;
+  } else if (result < -180) {
+    return result + 360;
+  } else {
+    return result;
+  }
+}
+
+function deg2rad(deg) {
+  return Math.PI * deg / 180;
+}
+
+function v_proj(v1, v2) {
+  /*
+   * ## `v_proj`
+   * - Parameters:
+   *    * v1: the first vector
+   *    * v2: the second vector
+   * - Returns: A vector
+   * - Behavior: Returns the vector projection of v1 onto v2.
+   * - See Also: v_angle
+   */
+  let th = deg2rad(v_angle(v1, v2));
+  let ma = v_length(v1);
+  let pl = ma * Math.cos(th);
+  return v_scale(v_norm(v2), pl);
+}
+
 /************************* Drawing Style Functions ****************************/
 
 function current_drawing_style() {
   /*
-   * current_drawing_style
-   *
-   * Parameters: None
-   *
-   * Returns: An object describing the style used for drawing.
-   *
-   * Behavior: Returns the current style settings for drawing, like the
-   *   stroke/fill colors and the stroke width. This will be a mix of the
-   *   default drawing style and any other active styles.
-   *
-   * See Also: get_canvas, set_drawing_style, apply_drawing_style
+   * ## `current_drawing_style`
+   * - Parameters: None
+   * - Returns: An object describing the style used for drawing.
+   * - Behavior: Returns the current style settings for drawing, like the
+   *     stroke/fill colors and the stroke width. This will be a mix of the
+   *     default drawing style and any other active styles.
+   * - See Also: get_canvas, set_drawing_style, apply_drawing_style
    */
   let result = {};
   for (let k of Object.keys(DEFAULT_DRAWING_STYLE)) {
@@ -1203,8 +1655,8 @@ function set_fill_color(color) { set_drawing_style('fill', color); }
 
 function draw_rectangle(center, width, height) {
   let rect = document.createElementNS(SVGNS, "rect");
-  rect.setAttributeNS(null, 'x', center[0]);
-  rect.setAttributeNS(null, 'y', center[1]);
+  rect.setAttributeNS(null, 'x', center[0] - width/2);
+  rect.setAttributeNS(null, 'y', center[1] - height/2);
   rect.setAttributeNS(null, 'width', width);
   rect.setAttributeNS(null, 'height', height);
   apply_drawing_style(rect);
@@ -1221,7 +1673,7 @@ function draw_circle(center, radius) {
 }
 
 function draw_ellipse(center, radius, ratio) {
-  let angle = v_angle([1, 0], radius);
+  let angle = v_rotation([1, 0], radius);
   let r1 = v_length(radius);
   let r2 = r1 * ratio;
   let ellipse = document.createElementNS(SVGNS, "ellipse");
@@ -1246,3 +1698,383 @@ function draw_line(from, to) {
   apply_drawing_style(line);
   put_on_canvas(line);
 }
+
+function get_last_path_command() {
+  let path = get_path();
+  let data = path.getAttributeNS(null, 'd');
+  let bits = data.split(' ');
+  let r = /[A-Za-z]/;
+  let found = [];
+  for (let i = bits.length - 1; i >= 0; --i) {
+    let b = bits[i];
+    found.unshift(b);
+    if (r.test(b)) {
+      break;
+    }
+  }
+  return found.join(' ')
+}
+
+function get_pen_position() {
+  let path = get_path();
+  let data = path.getAttributeNS(null, 'd');
+  let bits = data.split(' ');
+  let r = /[A-Za-z]/;
+  let found = [];
+  for (let i = bits.length - 1; i >= 0; --i) {
+    let b = bits[i];
+    if (!r.test(b)) {
+      found.unshift(b);
+    }
+    if (found.length == 2) {
+      break;
+    }
+  }
+  if (found.length == 2) {
+    return [parseFloat(found[0]), parseFloat(found[1])];
+  } else {
+    console.warn("Found unexpected number of numeric entries in latest path!");
+    console.log("Path data is: '" + ata + "'");
+    console.log("Found entries: " + found);
+    return [0, 0]; // default point is the origin
+  }
+}
+
+function get_path_heading_vector() {
+  let path = get_path();
+  let data = path.getAttributeNS(null, 'd');
+  let bits = data.split(' ');
+  let r = /[A-Za-z]/;
+  let found = [];
+  for (let i = bits.length - 1; i >= 0; --i) {
+    let b = bits[i];
+    if (!r.test(b)) {
+      found.unshift(b);
+    }
+    if (found.length == 4) {
+      break;
+    }
+  }
+  if (found.length == 2) {
+    return [1, 0]; // default heading is to the right
+  } else if (found.length == 4) {
+    let x1 = parseInt(found[0]);
+    let y1 = parseInt(found[1]);
+    let x2 = parseInt(found[2]);
+    let y2 = parseInt(found[3]);
+    return [ x2 - x1, y2 - y1 ]; // heading based on last two points
+  } else {
+    console.warn("Found an odd number of numeric entries in latest path!");
+    console.log("Path data is: '" + ata + "'");
+    console.log("Found entries: " + found);
+    return [1, 0]; // default heading is to the right
+  }
+}
+
+function get_pen_heading() {
+  let path = get_path();
+  return parseFloat(path.getAttributeNS(null, 'data-heading'));
+}
+
+function set_pen_heading(angle) {
+  let path = get_path();
+  path.setAttributeNS(null, 'data-heading', angle);
+}
+
+function move_pen_to(to) {
+  let path = get_path();
+  let data = path.getAttributeNS(null, 'd');
+  path.setAttributeNS(null, 'd', data + " M " + to[0] + " " + to[1]);
+  path.setAttributeNS(null, 'data-position', '' + to[0] + ',' + to[1]);
+  let last = get_pen_position();
+  let vec = v_sub(to, last);
+  path.setAttributeNS(null, 'data-heading', Math.atan2(vec[1], vec[0]));
+}
+
+function move_pen(how_far) {
+  let path = get_path();
+  let data = path.getAttributeNS(null, 'd');
+  let angle = get_pen_heading();
+  let mv = [how_far * Math.cos(angle), how_far * Math.sin(angle)];
+  path.setAttributeNS(null, 'd', data + " m " + mv[0] + " " + mv[1]);
+  let lp = get_pen_position();
+  let np = [lp[0] + mv[0], lp[1] + mv[1]];
+  path.setAttributeNS(null, 'data-position', '' + np[0] + ',' + np[1]);
+  // heading is unaffected
+}
+
+function trace_line_to(to) {
+  let path = get_path();
+  let data = path.getAttributeNS(null, 'd');
+  path.setAttributeNS(null, 'd', data + " L " + to[0] + " " + to[1]);
+  path.setAttributeNS(null, 'data-position', '' + to[0] + ',' + to[1]);
+  let last = get_pen_position();
+  let vec = v_sub(to, last);
+  path.setAttributeNS(null, 'data-heading', Math.atan2(vec[1], vec[0]));
+}
+
+function trace_line(how_far) {
+  let path = get_path();
+  let data = path.getAttributeNS(null, 'd');
+  let angle = get_pen_heading();
+  let mv = [how_far * Math.cos(angle), how_far * Math.sin(angle)];
+  path.setAttributeNS(null, 'd', data + " l " + mv[0] + " " + mv[1]);
+  let lp = get_pen_position();
+  let np = [lp[0] + mv[0], lp[1] + mv[1]];
+  path.setAttributeNS(null, 'data-position', '' + np[0] + ',' + np[1]);
+  // heading is unaffected
+}
+
+function trace_curve_to(to) {
+  let path = get_path();
+  let angle = get_pen_heading();
+  let lp = get_pen_position();
+  let rv = v_sub(to, lp);
+
+  // projected and orthogonal vectors
+  let pv = v_proj(rv, [Math.cos(angle), Math.sin(angle)]);
+  let ov = v_sub(rv, pv);
+
+  // rotated relative coordinates
+  let rc = [v_length(pv), v_length(ov)];
+
+  trace_curve(rc);
+}
+
+function trace_curve(relative_coords) {
+  let path = get_path();
+  let data = path.getAttributeNS(null, 'd');
+  let lp = get_pen_position();
+  let angle = get_pen_heading();
+  let rv = v_add(
+    v_scale([Math.cos(angle), Math.sin(angle)], relative_coords[0]),
+    v_scale([-Math.sin(angle), Math.cos(angle)], relative_coords[1])
+  );
+  if (relative_coords[0] <= 0) {
+    // Use two segments to bend backwards
+    // TODO
+  } else {
+    // Direct curve to our destination
+    let rel_angle = deg2rad(v_rotation([1, 0], relative_coords));
+    let adj = v_length(relative_coords)/2;
+    // cosine(rel_angle) = adjacent / hypotenuse, so hyp = adj / cos(rel_angle)
+    let hyp = adj / Math.cos(rel_angle);
+    let hv = v_scale([Math.cos(angle), Math.sin(angle)], hyp);
+    path.setAttributeNS(
+      null,
+      'd',
+      data + " q " + hv[0] + " " + hv[1] + ", " + rv[0] + " " + rv[1]
+    );
+    // final position and angle:
+    let fp = v_add(lp, rv);
+    path.setAttributeNS(null, 'data-position', fp[0] + ',' + fp[1]);
+    let fhv = v_sub(rv, hv);
+    let fa = Math.atan2(fhv[1], fhv[0]);
+    path.setAttributeNS(null, 'data-heading', fa);
+  }
+}
+
+
+/************************ Additional Documentation ****************************/
+
+/*
+# available_scripts
+- Categories: style_control text fonts
+- See Also: script_styles, set_font, load_font
+- Text: The scripts (writing systems) that are available by default are
+    Google's Noto family of fonts which aims to have complete Unicode coverage.
+    In the list below, they are organized by geographical origin, and then
+    alphabetically by English name. Scripts are accessible using both their
+    endonym (listed in angle brackets where avialable) and their English name
+    (listed in parentheses). Additionally, some scripts are available in
+    multiple styles, which are listed under each available script. See
+    [script styles](#script_styles) for more information about styles.
+
+    - Western European
+        * <Latin> (Latin)
+            * serif
+            * sans-serif
+            * monospaced
+            * display
+            * (Note: Covers most modern Romance and Germanic languages)
+        * <ελληνικά> (Greek)
+
+    - Eastern European
+        * <Кириллица> (Cyrillic)
+            * serif
+            * sans-serif
+            * display
+
+    - East Asian
+        * <日本語> (Japanese)
+        * <简体中文> (Simplified Chinese)
+        * <繁體中文> (Traditional Chinese)
+        * <廣東話> (Cantonese)
+        * <> (Mongolian)
+
+    - Central Asian
+        * <> (Armenian)
+            * serif
+            * sans-serif
+        * <> (Georgian)
+        * <> (Urdu)
+
+    - Arabian & Levantine
+        * <> (Hebrew)
+        * <> (Arabic)
+
+    - Southeast Asian
+        * <> (Buginese)
+        * <> (Cham)
+        * <ꦕꦫꦏꦤ꧀> (Javanesee)
+        * <ꤊꤢ꤬ꤛꤢ꤭ ꤜꤟꤤ꤬> (Kayah Li)
+        * <> (Khmer)
+        * <> (Lao)
+        * <> (Malayalam)
+        * <> (Thai)
+
+    - Oceanian
+        * <> (Balinese)
+        * <> (Batak)
+        * <> (Buhid)
+        * <ᜱᜨᜳᜨᜳᜢ> (Hanunoo/Hanunuo)
+
+    - Indian & Sri Lankan
+        * <> (Bengali)
+        * <> (Chakma)
+        * <> (Devangari)
+        * <> (Gujarati)
+        * <> (Gurmukhi)
+        * <> (Kannada)
+        * <ᰛᰩᰵ་ᰛᰵᰧᰶ> (Lepcha)
+        * <ᤕᤠᤰᤌᤢᤱ ᤐᤠᤣ> (Limbu)
+        * <> (Tamil)
+        * <> (Telugu)
+
+    - North American
+        * <> (Cherokee)
+        * <> (Canadian Aboriginal)
+        * <> (Osage)
+
+    - South American
+
+    - North African
+        * <> (Coptic)
+        * <> (Ethiopic)
+
+    - Central African
+        * <> (Adlam)
+        * <> (Bamum)
+
+    - South African
+       
+    - Historical
+        * <> (Anatolian Hieroglyphs)
+        * <> (Avestan)
+        * <> (Brahmi)
+        * <> (Carian)
+        * <> (Cuneiform)
+        * <> (Cypriot)
+        * <> (Deseret)
+        * <> (Egyptian Hieroglyphs)
+        * <> (Glagolitic)
+        * <> (Gothic)
+        * <> (Imperial Aramaic)
+        * <> (Inscriptional Pahlavi)
+        * <> (Inscriptional Parthian)
+        * 𑂍𑂶𑂟𑂲 (Kaithi)
+        * <> (Kharoshthi)
+        * <> (Linear B)
+
+    #####
+        * <> (Lisu)
+        * <> (Lycian)
+        * <> (Lydian)
+        * <> (Mandaic)
+        * <> (Meetei Mayek)
+        * <> (Myanmar)
+        * <> (NKo)
+        * <> (New Tai Lue)
+        * <> (Ogham)
+        * <> (Ol Chiki)
+        * <> (Old Italic)
+        * <> (Old Persian)
+        * <> (Old South Arabian)
+        * <> (Old Turkic)
+        * <> (Oriya)
+        * <> (Osmanya)
+        * <> (Phags Pa)
+        * <> (Phoenician)
+        * <> (Rejang)
+        * <> (Runic)
+        * <> (Samaritan)
+        * <> (Saurashtra)
+        * <> (Shavian)
+        * <> (Sinhala)
+        * <> (Sudanese)
+        * <> (Syloti Nagri)
+        * <> (Symbols)
+        * <> (Symbols2)
+        * <> (Syriac Eastern)
+        * <> (Syriac Estrangela)
+        * <> (Syriac Western)
+        * <> (Tagalog)
+        * <> (Tagbanwa)
+        * <> (Tai Le)
+        * <> (Tai Tham)
+        * <> (Tai Viet)
+        * <> (Thaana)
+        * <> (Tibetan)
+        * <> (Tifinagh)
+        * <> (Ugaritic)
+        * <> (Vai)
+        * <> (Yi)
+
+  # Serif
+        * Armenian
+        * Bengali
+        * CJK (JP/KR/SC/TC)
+        * Devangari
+        * Ethiopic
+        * Georgian
+        * Gujarati
+        * Hebrew
+        * Kannada
+        * Khmer
+        * Lao
+        * Malayalam
+        * Myanmar
+        * Sinhala
+        * Tamil
+        * Telugu
+        * Thai
+*/
+
+/*
+# script_styles
+- Categories: style_control text fonts
+- See Also: available_scripts, set_font, load_font
+- Text: Many avaialble writing systems (scripts) also include multiple styles,
+    such as serif, sans-serif, or monospaced. The styles are listed along with
+    each script in the [available scripts](#available_scripts) list. The
+    general terminology of various styles includes:
+
+    - serif: A serif style inclues small marks at the ends of glyph strokes
+      called serifs that help differentiate the characters, making text easier
+      to read at larger font sizes for experienced readers. However, serifs
+      make text harder to read at small sizes and for children and many
+      dyslexic readers. These styles are more similar to ancient calligraphic
+      styles, and are usually used for blocks of lots of text. The default
+      style for most scripts is a serif style, but the default font size is
+      also fairly large.
+
+    - sans-serif: A sans-serif (literally "without serif") style is simpler and
+      does not include extra marks at stroke ends. Sans-serif styles are often
+      easier to read for those just learning to read and for people with
+      dyslexia. Sans-serif styles are also often used for short or isolated
+      bits of text, like titles or captions. Sans-serif styles are usually more
+      legible than serif styles at small font sizes.
+
+    - display: A fancier version of a font that's intended for use in titles or
+      signs. Not intended to be used for body text or extended reading.
+*/

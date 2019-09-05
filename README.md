@@ -20,7 +20,6 @@ creating text, pictures, and music. Features:
 - Auto-extracted web-based documentation.
 - Writing
     * Finish documentation for style functions.
-    * Hyperlinks
     * Fonts
 - Audio
     * Instruments
