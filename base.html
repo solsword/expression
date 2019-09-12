@@ -10,7 +10,7 @@
     <!-- TODO: Dynamic font loading on use? -->
     <link href="https://fonts.googleapis.com/css?family=Noto+Sans+HK:400,700|Noto+Sans+JP:400,700|Noto+Sans+KR:400,700|Noto+Sans+SC:400,700|Noto+Sans+TC:400,700|Noto+Sans:400,400i,700,700i|Noto+Serif+JP:400,700|Noto+Serif+KR:400,700|Noto+Serif+SC:400,700|Noto+Serif+TC:400,700|Noto+Serif:400,400i,700,700i&display=swap&subset=chinese-hongkong,chinese-simplified,chinese-traditional,cyrillic,cyrillic-ext,devanagari,greek,greek-ext,japanese,korean,latin-ext,vietnamese" rel="stylesheet">
     <!-- style defaults -->
-    <style>
+    <style id="expression_style">
 body { /* the background */
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -26,77 +26,6 @@ body { /* the background */
 
 body > * {
   overflow-y: scroll;
-}
-
-section.document { /* text documents */
-  margin: 10pt;
-  padding: 8pt;
-  width: auto;
-  box-sizing: border-box;
-  border-radius: 8pt;
-  background: white;
-  font-weight: normal;
-  text-decoration: none;
-  font-style: normal;
-  font-size: 16pt;
-}
-
-h1 { /* headings */
-  font-family: serif;
-  font-size: 24pt;
-}
-
-a:link, a:visited { /* links */
-  text-decoration: underline;
-  color: #444444;
-}
-
-a:link:hover, a:visited:hover { /* hover for links */
-  color: #777777;
-}
-
-div.audio { /* audio controls */
-  margin: 10pt;
-  padding: 8pt;
-  border-radius: 8pt;
-  background-color: white;
-}
-
-div.audio .reset { /* reset button */
-  margin: 4pt;
-  font-size: larger;
-}
-
-div.audio .playpause { /* play/pause button */
-  margin: 4pt;
-  font-size: larger;
-}
-
-div.audio .vol-symbol { /* volume/mute symbol */
-  margin: 4pt;
-  font-size: larger;
-  text-decoration: none;
-  color: black;
-}
-
-div.audio .vol-symbol:visited { /* don't change color */
-  color: black;
-}
-
-.canvas_container { /* drawing canvases */
-  margin: 4%;
-  padding: 8pt;
-  width: 96%;
-  max-width: 50em;
-  box-sizing: border-box;
-  border-radius: 8pt;
-  background-color: white;
-  position: relative;
-}
-
-svg.canvas {
-  background-color: white;
-  width: 100%;
 }
 
 .dl_button {
@@ -133,7 +62,114 @@ svg.canvas {
   }
 }
     </style>
-    <style>
+
+    <style id="document_style">
+.document { /* text documents */
+  position: relative;
+  margin: 10pt;
+  padding: 8pt;
+  width: auto;
+  box-sizing: border-box;
+  border-radius: 8pt;
+  background: white;
+  font-weight: normal;
+  text-decoration: none;
+  font-style: normal;
+  font-size: 16pt;
+}
+
+/* headings */
+h1 {
+  font-family: serif;
+  font-size: 24pt;
+}
+
+h2 {
+  font-family: serif;
+  font-size: 20pt;
+}
+
+h3 {
+  font-family: serif;
+  font-size: 18pt;
+}
+
+h4 {
+  font-family: serif;
+  font-size: 18pt;
+}
+
+h5 {
+  font-family: serif;
+  font-size: 17pt;
+}
+
+h4 {
+  font-family: serif;
+  font-size: 17pt;
+}
+
+a:link, a:visited { /* links */
+  text-decoration: underline;
+  color: #444444;
+}
+
+a:link:hover, a:visited:hover { /* hover for links */
+  color: #777777;
+}
+    </style>
+
+    <style id="canvas_style">
+.canvas_container { /* drawing canvases */
+  margin: 4%;
+  padding: 8pt;
+  width: 96%;
+  max-width: 50em;
+  box-sizing: border-box;
+  border-radius: 8pt;
+  background-color: white;
+  position: relative;
+}
+
+svg.canvas {
+  background-color: white;
+  width: 90%;
+}
+    </style>
+
+    <style id="audio_style">
+div.audio { /* audio controls */
+  position: relative;
+  margin: 10pt;
+  padding: 8pt;
+  padding-right: 32pt; /* space for the dl_button */
+  border-radius: 8pt;
+  background-color: white;
+}
+
+div.audio .reset { /* reset button */
+  margin: 4pt;
+  font-size: larger;
+}
+
+div.audio .playpause { /* play/pause button */
+  margin: 4pt;
+  font-size: larger;
+}
+
+div.audio .vol-symbol { /* volume/mute symbol */
+  margin: 4pt;
+  font-size: larger;
+  text-decoration: none;
+  color: black;
+}
+
+div.audio .vol-symbol:visited { /* don't change color */
+  color: black;
+}
+    </style>
+
+    <style id="editor_style">
 #editor {
   margin-top: 4pt;
   position: relative;
@@ -143,6 +179,7 @@ svg.canvas {
   border-radius: 8pt;
 }
     </style>
+
   </head>
   <body id="body">
     <div id="expression">
@@ -192,16 +229,99 @@ draw_circle([0, 0], 20);
 // Bee trail
 set_stroke_color("black");
 set_fill_color("transparent");
+turn_pen(15);
 trace_curve_to([30, 50]);
-trace_line(20);
-trace_curve([30, -30]);
-trace_curve([20, -30]);
-trace_curve([20, -20]);
-trace_curve([40, -30]);
-trace_curve([40, 30]);
-trace_curve([40, 20]);
-trace_curve([20, -20]);
-trace_line(20);
+trace_curve([10, -40], 180);
+trace_curve([-10, -40], 180);
+trace_curve([40, 40], 30);
+trace_curve([20, -20], -120);
+move_pen(80);
+let bee_neck = get_pen_position();
+let bee_heading = get_pen_heading();
+
+// First bee wing
+set_fill_color("white");
+new_path_here();
+move_pen([-25, 9]);
+turn_pen(85);
+trace_curve([0, 0], 240, 90);
+
+// Bee body
+set_stroke_color("black");
+set_fill_color("yellow");
+new_path();
+move_pen_to(bee_neck);
+set_pen_heading(bee_heading);
+turn_pen(90);
+trace_curve([0, 70], 180, 30);
+trace_curve([0, 70], 180, 30);
+turn_pen(-90);
+
+// Bee stripes
+set_fill_color("transparent");
+new_path_here();
+move_pen([-15, 20]);
+turn_pen(-90 - 30);
+trace_curve([34, 18], 60, 17);
+move_pen([-40, 10]);
+turn_pen(-60);
+trace_curve([38, 23], 60, 20);
+move_pen([-46, 10]);
+turn_pen(-60);
+trace_curve([38, 23], 60, 20);
+move_pen([-43, 9]);
+turn_pen(-60);
+trace_curve([34, 18], 60, 17);
+
+// Bee legs
+move_pen([-4, 4]);
+turn_pen(6);
+let leg_angle = get_pen_heading();
+let leg_pos = get_pen_position();
+trace_curve([10, -10]);
+
+let leg_offset = [7.5, 11];
+
+move_pen_to(leg_pos);
+set_pen_heading(leg_angle);
+move_pen(leg_offset);
+trace_curve([10, -10]);
+
+move_pen_to(leg_pos);
+set_pen_heading(leg_angle);
+move_pen(v_scale(leg_offset, 2));
+trace_curve([10, -10]);
+
+move_pen_to(leg_pos);
+set_pen_heading(leg_angle);
+move_pen(v_scale(leg_offset, 3));
+trace_curve([10, -10]);
+
+// Second bee wing
+set_fill_color("white");
+new_path();
+move_pen_to(bee_neck);
+set_pen_heading(bee_heading);
+move_pen([-25, 9]);
+turn_pen(110);
+trace_curve([0, 0], 240, 90);
+
+// Bee head
+set_fill_color("yellow");
+draw_circle(bee_neck, 15);
+set_fill_color("black");
+draw_circle(v_add(bee_neck, [-4, 0]), 2);
+draw_circle(v_add(bee_neck, [4, 4]), 2);
+
+// Bee smile
+set_fill_color("transparent");
+new_path();
+move_pen_to(bee_neck);
+set_pen_heading(bee_heading);
+move_pen([-5, -6]);
+turn_pen(-45);
+trace_curve([8, 8], 90);
+
       </div>
     </div>
     <script type="text/javascript">

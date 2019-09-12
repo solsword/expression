@@ -12,7 +12,7 @@
  * rather than on full features.
  */
 
-/********************************* Globals ************************************/
+/*-------------------------------- Globals -----------------------------------*/
 
 // Namespace URLs for SVG, XMLNS and XLINK namespaces
 var SVGNS = "http://www.w3.org/2000/svg";
@@ -220,7 +220,7 @@ var SUSTAIN_TIME = 0.3; // sustain time in % of note duration
 var BPM = 108; // beats per minute
 var FULL_NOTE_LENGTH = (1/(BPM / 60)) * 4; // length of a full note per BPM
 
-/********************** Context Management Functions **************************/
+/*--------------------- Context Management Functions -------------------------*/
 
 function set_container(element) {
   /*
@@ -310,7 +310,7 @@ function new_canvas() {
   CURRENT_CANVAS.setAttributeNS(null, "transform", "scale(1, -1)");
   svg.appendChild(CURRENT_CANVAS);
 
-  // We add a download button to save the SVG canvas to disk.
+  // A download button to save the SVG canvas to disk.
   dl_button = document.createElement("button");
   dl_button.classList.add("dl_button")
   //dl_button.innerText = "💾";
@@ -333,6 +333,7 @@ function save_canvas(svg, filename) {
    * - Categories: internal images
    * - Parameters:
    *     * svg: The DOM SVG element to save.
+   *     * filename (optional): The file name for the download.
    * - Returns: nothing
    * - Behavior: Bundles up the given SVG element into a file and offers it to
    *     the user as a download.
@@ -395,6 +396,29 @@ function new_path() {
   return CURRENT_PATH;
 }
 
+function new_path_here() {
+  /*
+   * ## `new_path_here`
+   * - Categories: context_control images
+   * - Parameters: None
+   * - Returns: A new drawing path
+   * - Behavior: Works just like new_path, but sets the starting position of
+   *     the new path to the current path position of the old path that's being
+   *     replaced.
+   * - See Also: new_path
+   */
+  let pos = get_pen_position();
+  let heading = get_pen_heading();
+  CURRENT_PATH = document.createElementNS(SVGNS, 'path');
+  CURRENT_PATH.setAttributeNS(null, "d", "M " + pos[0] + " " + pos[1]);
+  CURRENT_PATH.setAttributeNS(null, "data-heading", deg2rad(heading));
+  CURRENT_PATH.setAttributeNS(null, "data-position", pos[0] + ',' + pos[1]);
+  apply_drawing_style(CURRENT_PATH);
+  let cv = get_canvas();
+  cv.appendChild(CURRENT_PATH);
+  return CURRENT_PATH;
+}
+
 function get_document() {
   /*
    * ## `get_document`
@@ -431,7 +455,71 @@ function new_document() {
   CONTAINER.appendChild(CURRENT_DOCUMENT);
   CURRENT_PARAGRAPH = undefined;
   CURRENT_HEADING = undefined;
+
+  // A download button to save the document as an HTML file.
+  dl_button = document.createElement("button");
+  dl_button.classList.add("dl_button")
+  //dl_button.innerText = "💾";
+  dl_button.innerText = "⬇";
+  dl_button.addEventListener("click", function () {
+    save_document(CURRENT_DOCUMENT);
+  });
+
+  CURRENT_DOCUMENT.appendChild(dl_button);
+
   return CURRENT_DOCUMENT;
+}
+
+function save_document(doc, filename) {
+  /*
+   * ## `save_document`
+   *
+   * - Categories: internal text
+   * - Parameters:
+   *     * doc: The DOM section element to save.
+   *     * filename (optional): The file name for the download.
+   * - Returns: nothing
+   * - Behavior: Bundles up the given section element into a full standalone
+   *     HTML file and offers it to the user as a download.
+   * - See Also: new_document
+   */
+  // TODO
+  if (filename == undefined) {
+    filename = "expression_document.html";
+  }
+
+  // Grab innerHTML of document but without the download button:
+  let dl_button = doc.querySelector(".dl_button");
+  doc.removeChild(dl_button);
+  let content = doc.innerHTML;
+  doc.insertBefore(dl_button, doc.firstChild);
+
+  // Assemble title, header, and footer
+  let title = select_heading(0, doc).innerText;
+  let ds = document.getElementById("document_style").outerHTML;
+  let header = (
+    "<!doctype html>\n<html>\n  <head>\n    <title>" + title + "</title>"
+  + "\n    <meta charset='utf-8'/>\n    " + ds + "\n  </head>"
+  + "\n  <body class='document'>\n"
+  )
+  // TODO: Include fonts?
+  let footer = "\n  </body>\n</html>"
+
+  // Put together the full document string
+  let full_doc = header + content + footer
+
+  // Offer it for download:
+  var a = document.createElement('a');
+  a.setAttribute(
+    "href",
+    "data:text/html;charset=utf-8," + encodeURIComponent(full_doc)
+  );
+  a.setAttribute("download", filename);
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
 }
 
 function get_paragraph() {
@@ -611,10 +699,53 @@ function new_audio() {
   );
   CURRENT_AUDIO.appendChild(vol);
 
+  // A download button to save the audio to disk.
+  dl_button = document.createElement("button");
+  dl_button.classList.add("dl_button")
+  //dl_button.innerText = "💾";
+  dl_button.innerText = "⬇";
+  dl_button.addEventListener("click", function () {
+    save_audio(CURRENT_AUDIO);
+  });
+  CURRENT_AUDIO.appendChild(dl_button);
+
   // Wrap things up
   CONTAINER.appendChild(CURRENT_AUDIO);
   CURRENT_TRACK = undefined;
   return CURRENT_AUDIO;
+}
+
+function save_audio(audio, filename) {
+  /*
+   * ## `save_audio`
+   *
+   * - Categories: internal audio
+   * - Parameters:
+   *     * audio: The audio element to save.
+   *     * filename (optional): The file name for the download.
+   * - Returns: nothing
+   * - Behavior: Encodes the tracks of the given audio element into a .WAV file
+   *     and offers it to the user as a download.
+   * - See Also: new_canvas
+   */
+  if (filename == undefined) {
+    filename = "expression_audio.wav";
+  }
+
+  // TODO
+  wav_data = "";
+
+  var a = document.createElement('a');
+  a.setAttribute(
+    "href",
+    // TODO
+    "data:audio/wav;" + encodeURIComponent(wav_data)
+  );
+  a.setAttribute("download", filename);
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
 
 function get_track() {
@@ -658,7 +789,7 @@ function new_track() {
   return CURRENT_TRACK;
 }
 
-/************************ Text Style Functions ********************************/
+/*----------------------- Text Style Functions -------------------------------*/
 
 function current_text_style() {
   /*
@@ -897,7 +1028,7 @@ function set_text_color(color) {
 //function pick_color(
 
 
-/********************** Text Creation Functions *******************************/
+/*--------------------- Text Creation Functions ------------------------------*/
 
 function write(words, spacing) {
   /*
@@ -972,7 +1103,28 @@ function write_title(words) {
   ch.appendChild(sp)
 }
 
-/************************ Audio Setup/Control Functions ***********************/
+/*------------------------ Text Manipulation Functions -----------------------*/
+
+function select_heading(index, doc) {
+  if (doc == undefined) {
+    doc = get_document();
+  }
+  if (index == undefined) {
+    index = 0;
+  }
+  let headings = [];
+  for (let child of doc.childNodes) {
+    if (child.nodeName == "H1") {
+      headings.push(child);
+    }
+  }
+  if (index < 0) {
+    index = headings.length + index;
+  }
+  return headings[index];
+}
+
+/*----------------------- Audio Setup/Control Functions ----------------------*/
 
 function add_track(audio, track) {
   /*
@@ -1321,7 +1473,7 @@ function set_volume(audio, value, update_slider) {
 }
 
 
-/************************* Audio Creation Functions ***************************/
+/*------------------------ Audio Creation Functions --------------------------*/
 
 function add_note(tone, duration) {
   /*
@@ -1431,7 +1583,7 @@ function add_rest(duration) {
   add_note('-', duration);
 }
 
-/***************************** Vector Functions *******************************/
+/*---------------------------- Vector Functions ------------------------------*/
 
 function v_length(v) {
   /*
@@ -1588,6 +1740,20 @@ function deg2rad(deg) {
   return Math.PI * deg / 180;
 }
 
+function rad2deg(deg) {
+  return 180 * deg / Math.PI;
+}
+
+function cancel_rotations(angle) {
+  while (angle > 2*Math.PI) {
+    angle -= 2*Math.PI;
+  }
+  while (angle < 0) {
+    angle += 2*Math.PI;
+  }
+  return angle;
+}
+
 function v_proj(v1, v2) {
   /*
    * ## `v_proj`
@@ -1604,7 +1770,16 @@ function v_proj(v1, v2) {
   return v_scale(v_norm(v2), pl);
 }
 
-/************************* Drawing Style Functions ****************************/
+// Floating point equality constant
+var EPSILON = 1e-7;
+function v_same(v1, v2) {
+  return (
+    Math.abs(v1[0] - v2[0]) < EPSILON
+ && Math.abs(v1[1] - v2[1]) < EPSILON
+  );
+}
+
+/*------------------------ Drawing Style Functions ---------------------------*/
 
 function current_drawing_style() {
   /*
@@ -1651,7 +1826,7 @@ function set_stroke_color(color) { set_drawing_style('stroke', color); }
 function set_stroke_width(width) { set_drawing_style('stroke-width', width); }
 function set_fill_color(color) { set_drawing_style('fill', color); }
 
-/**************************** Drawing Functions *******************************/
+/*--------------------------- Drawing Functions ------------------------------*/
 
 function draw_rectangle(center, width, height) {
   let rect = document.createElementNS(SVGNS, "rect");
@@ -1717,68 +1892,28 @@ function get_last_path_command() {
 
 function get_pen_position() {
   let path = get_path();
-  let data = path.getAttributeNS(null, 'd');
-  let bits = data.split(' ');
-  let r = /[A-Za-z]/;
-  let found = [];
-  for (let i = bits.length - 1; i >= 0; --i) {
-    let b = bits[i];
-    if (!r.test(b)) {
-      found.unshift(b);
-    }
-    if (found.length == 2) {
-      break;
-    }
-  }
-  if (found.length == 2) {
-    return [parseFloat(found[0]), parseFloat(found[1])];
-  } else {
-    console.warn("Found unexpected number of numeric entries in latest path!");
-    console.log("Path data is: '" + ata + "'");
-    console.log("Found entries: " + found);
-    return [0, 0]; // default point is the origin
-  }
-}
-
-function get_path_heading_vector() {
-  let path = get_path();
-  let data = path.getAttributeNS(null, 'd');
-  let bits = data.split(' ');
-  let r = /[A-Za-z]/;
-  let found = [];
-  for (let i = bits.length - 1; i >= 0; --i) {
-    let b = bits[i];
-    if (!r.test(b)) {
-      found.unshift(b);
-    }
-    if (found.length == 4) {
-      break;
-    }
-  }
-  if (found.length == 2) {
-    return [1, 0]; // default heading is to the right
-  } else if (found.length == 4) {
-    let x1 = parseInt(found[0]);
-    let y1 = parseInt(found[1]);
-    let x2 = parseInt(found[2]);
-    let y2 = parseInt(found[3]);
-    return [ x2 - x1, y2 - y1 ]; // heading based on last two points
-  } else {
-    console.warn("Found an odd number of numeric entries in latest path!");
-    console.log("Path data is: '" + ata + "'");
-    console.log("Found entries: " + found);
-    return [1, 0]; // default heading is to the right
-  }
+  let bits = path.getAttributeNS(null, "data-position").split(',');
+  return [parseFloat(bits[0]), parseFloat(bits[1])];
 }
 
 function get_pen_heading() {
   let path = get_path();
-  return parseFloat(path.getAttributeNS(null, 'data-heading'));
+  return rad2deg(parseFloat(path.getAttributeNS(null, 'data-heading')));
 }
 
 function set_pen_heading(angle) {
   let path = get_path();
-  path.setAttributeNS(null, 'data-heading', angle);
+  path.setAttributeNS(null, 'data-heading', cancel_rotations(deg2rad(angle)));
+}
+
+function turn_pen(how_far) {
+  let angle = get_pen_heading();
+  let path = get_path();
+  path.setAttributeNS(
+    null,
+    'data-heading',
+    cancel_rotations(deg2rad(angle + how_far))
+  );
 }
 
 function move_pen_to(to) {
@@ -1794,8 +1929,19 @@ function move_pen_to(to) {
 function move_pen(how_far) {
   let path = get_path();
   let data = path.getAttributeNS(null, 'd');
-  let angle = get_pen_heading();
-  let mv = [how_far * Math.cos(angle), how_far * Math.sin(angle)];
+  let angle = deg2rad(get_pen_heading());
+  let x, y;
+  if (Array.isArray(how_far)) {
+    x = how_far[0];
+    y = how_far[1];
+  } else {
+    x = how_far;
+    y = 0;
+  }
+  let mv = v_add(
+    [x * Math.cos(angle), x * Math.sin(angle)],
+    [y * -Math.sin(angle), y * Math.cos(angle)]
+  );
   path.setAttributeNS(null, 'd', data + " m " + mv[0] + " " + mv[1]);
   let lp = get_pen_position();
   let np = [lp[0] + mv[0], lp[1] + mv[1]];
@@ -1816,8 +1962,19 @@ function trace_line_to(to) {
 function trace_line(how_far) {
   let path = get_path();
   let data = path.getAttributeNS(null, 'd');
-  let angle = get_pen_heading();
-  let mv = [how_far * Math.cos(angle), how_far * Math.sin(angle)];
+  let angle = deg2rad(get_pen_heading());
+  let x, y;
+  if (Array.isArray(how_far)) {
+    x = how_far[0];
+    y = how_far[1];
+  } else {
+    x = how_far;
+    y = 0;
+  }
+  let mv = v_add(
+    [x * Math.cos(angle), x * Math.sin(angle)],
+    [y * -Math.sin(angle), y * Math.cos(angle)]
+  );
   path.setAttributeNS(null, 'd', data + " l " + mv[0] + " " + mv[1]);
   let lp = get_pen_position();
   let np = [lp[0] + mv[0], lp[1] + mv[1]];
@@ -1825,11 +1982,11 @@ function trace_line(how_far) {
   // heading is unaffected
 }
 
-function trace_curve_to(to) {
+function trace_curve_to(pos, heading) {
   let path = get_path();
-  let angle = get_pen_heading();
+  let angle = deg2rad(get_pen_heading());
   let lp = get_pen_position();
-  let rv = v_sub(to, lp);
+  let rv = v_sub(pos, lp);
 
   // projected and orthogonal vectors
   let pv = v_proj(rv, [Math.cos(angle), Math.sin(angle)]);
@@ -1838,44 +1995,106 @@ function trace_curve_to(to) {
   // rotated relative coordinates
   let rc = [v_length(pv), v_length(ov)];
 
-  trace_curve(rc);
+  let rh;
+  if (heading != undefined) {
+    rh = heading - angle;
+  }
+
+  trace_curve(rc, rh);
 }
 
-function trace_curve(relative_coords) {
+function trace_curve(rel_pos, rel_heading, curve_size) {
   let path = get_path();
   let data = path.getAttributeNS(null, 'd');
   let lp = get_pen_position();
-  let angle = get_pen_heading();
+  let angle = deg2rad(get_pen_heading());
   let rv = v_add(
-    v_scale([Math.cos(angle), Math.sin(angle)], relative_coords[0]),
-    v_scale([-Math.sin(angle), Math.cos(angle)], relative_coords[1])
+    v_scale([Math.cos(angle), Math.sin(angle)], rel_pos[0]),
+    v_scale([-Math.sin(angle), Math.cos(angle)], rel_pos[1])
   );
-  if (relative_coords[0] <= 0) {
-    // Use two segments to bend backwards
-    // TODO
-  } else {
-    // Direct curve to our destination
-    let rel_angle = deg2rad(v_rotation([1, 0], relative_coords));
-    let adj = v_length(relative_coords)/2;
-    // cosine(rel_angle) = adjacent / hypotenuse, so hyp = adj / cos(rel_angle)
-    let hyp = adj / Math.cos(rel_angle);
-    let hv = v_scale([Math.cos(angle), Math.sin(angle)], hyp);
+
+  // compute control point locations
+  if (rel_heading == undefined && curve_size == undefined) {
+    if (rel_pos[0] <= 0) {
+      // Use separate control points if destination is behind current position
+      curve_size = v_length(rel_pos)/2;
+      if (curve_size == 0) {
+        // no movement -> no curve (heading & curve size not specified)
+        return;
+      }
+      // fall out to compute heading from curve_size
+    } else {
+      // Direct quadratic curve to our destination
+      let rel_angle = deg2rad(v_rotation([1, 0], rel_pos));
+      let adj = v_length(rel_pos)/2;
+      // cosine(rel_angle) = adj / hyp, so hyp = adj / cos(rel_angle)
+      curve_size = adj / Math.cos(rel_angle);
+      // control point location
+      let cp = v_scale([Math.cos(angle), Math.sin(angle)], curve_size);
+      // heading from control point location
+      let fhv = v_sub(rv, cp);
+      let fa = Math.atan2(fhv[1], fhv[0]);
+      rel_heading = rad2deg(fa - angle);
+    }
+  }
+
+  if (curve_size == undefined) {
+    // heading but no curve size
+    curve_size = v_length(rel_pos)/2;
+    if (curve_size == 0) {
+      // no movement -> no curve (heading & curve size not specified)
+      return;
+    }
+  } else if (rel_heading == undefined) {
+    // curve_size but no heading
+    if (curve_size >= v_length(rel_pos)/2) {
+      // set up isosceles triangle with curve_size and rel_pos
+      let rel_angle = deg2rad(v_rotation([1, 0], rel_pos));
+      let adj = v_length(rel_pos)/2;
+      let inner_angle = Math.acos(adj / curve_size);
+      // angle necessary to line up first cp with current heading:
+      let rot_back = rel_angle - inner_angle;
+      // rotate other cp by same amount:
+      rel_heading = rad2deg(rel_angle + inner_angle + rot_back - angle);
+    } else {
+      let rot_back = rel_angle;
+      let fr = (curve_size*2) / v_length(rel_pos);
+      rel_heading = rad2deg(rel_angle + rot_back * fr - angle);
+    }
+  }
+
+  // compute control points from curve_size and heading:
+  let hrad = deg2rad(rel_heading) + angle;
+  let cp1 = v_scale([Math.cos(angle), Math.sin(angle)], curve_size);
+  let cp2v = v_scale([Math.cos(hrad), Math.sin(hrad)], -curve_size);
+  let cp2 = v_add(rv, cp2v);
+
+  if (v_same(cp1, cp2)) {
     path.setAttributeNS(
       null,
       'd',
-      data + " q " + hv[0] + " " + hv[1] + ", " + rv[0] + " " + rv[1]
+      data + " q " + cp1[0] + " " + cp1[1] + ", " + rv[0] + " " + rv[1]
     );
-    // final position and angle:
-    let fp = v_add(lp, rv);
-    path.setAttributeNS(null, 'data-position', fp[0] + ',' + fp[1]);
-    let fhv = v_sub(rv, hv);
-    let fa = Math.atan2(fhv[1], fhv[0]);
-    path.setAttributeNS(null, 'data-heading', fa);
+  } else {
+    path.setAttributeNS(
+      null,
+      'd',
+      (
+        data + " c "
+      + cp1[0] + " " + cp1[1] + ", "
+      + cp2[0] + " " + cp2[1] + ", "
+      + rv[0] + " " + rv[1]
+      )
+    );
   }
+  // final position and angle:
+  let fp = v_add(lp, rv);
+  path.setAttributeNS(null, 'data-position', fp[0] + ',' + fp[1]);
+  path.setAttributeNS(null, 'data-heading', cancel_rotations(hrad));
 }
 
 
-/************************ Additional Documentation ****************************/
+/*----------------------- Additional Documentation ---------------------------*/
 
 /*
 # available_scripts
